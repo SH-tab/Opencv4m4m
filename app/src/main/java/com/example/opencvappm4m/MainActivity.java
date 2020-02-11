@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     CameraBridgeViewBase cameraBridgeViewBase ;
     BaseLoaderCallback baseLoaderCallback ;
 
+    // Variables definition.
     SeekBar mSkBbeta, mSkBalpha ;
     TextView mAlphaTv, mBetaTv ;
     int progressAlpha = 0 , progressBeta = 0 ;
@@ -165,10 +166,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         double alpha = 0;
         double beta = 0;
 
+        // Here is SeekBars structure, this changes the values within "Cany" function by manual control in screen.l
+        // This is alpha control SeekBar.
         mSkBalpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
+                // Introducing value from Seekbar to a variable.
                 progressAlpha = i ;
+                // Setting text and seekbar value to a textviex.
                 mAlphaTv.setText("alpha : " + progressAlpha);
             }
 
@@ -183,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
 
+        // This is beta control SeekBar.
         mSkBbeta.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int j, boolean fromUser) {
@@ -201,16 +207,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
 
-
+        // Putting de frame into a variable.
         Mat frame = inputFrame.gray() ;
-
+        
+        // Here we aply Canny function to the frame.
+        // Parentheses content (from where, to where, alpha value, beta value). 
         Imgproc.Canny(frame, frame, progressAlpha,progressBeta) ;
 
 
 
 
 
-
+        // Show results.
         return frame;
     }
 
