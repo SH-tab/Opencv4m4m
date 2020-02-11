@@ -20,6 +20,7 @@ import org.opencv.android.OpenCVLoader;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
@@ -32,9 +33,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     BaseLoaderCallback baseLoaderCallback ;
 
     // Variables definition.
-    SeekBar mSkBbeta, mSkBalpha ;
-    TextView mAlphaTv, mBetaTv ;
-    int progressAlpha = 0 , progressBeta = 0 ;
+    SeekBar mSkBbeta, mSkBalpha, mSkBGblur ;
+    TextView mAlphaTv, mBetaTv, mGblurTv ;
+    int progressAlpha = 0 , progressBeta = 0, progressGblur = 0 ;
 
 
     @Override
@@ -86,11 +87,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mSkBbeta.setProgress(progressBeta);
         mSkBbeta.setMax(400);
 
+        mSkBGblur = findViewById(R.id.SkBGblur) ;
+        mSkBGblur.setProgress(progressGblur);
+        mSkBGblur.setMax(200);
+
         mAlphaTv = findViewById(R.id.AlphaTv) ;
         mAlphaTv.setText("alpha : " + progressAlpha);
 
         mBetaTv = findViewById(R.id.BetaTv) ;
         mBetaTv.setText("beta : " + progressBeta);
+
+        mGblurTv = findViewById(R.id.GblurTv) ;
+        mGblurTv.setText("Gblur : " + progressGblur) ;
 
     }
 
@@ -188,6 +196,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
 
+
         // This is beta control SeekBar.
         mSkBbeta.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -201,17 +210,44 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             }
 
+
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
 
             }
         });
 
+
+        // This SeekBar control for GaussianBlur function.
+        mSkBGblur.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int k, boolean fromUser) {
+                progressGblur = k ;
+                mGblurTv.setText("Gblur : " + progressGblur);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+
         // Putting de frame into a variable.
         Mat frame = inputFrame.gray() ;
+
+        // GaussianBlur application.
+        // We define an openCv Size variable for avoid possible problems with the function.
+        org.opencv.core.Size ksize = new Size(9,9) ;
+        Imgproc.GaussianBlur(frame, frame, ksize, progressGblur);
         
         // Here we aply Canny function to the frame.
-        // Parentheses content (from where, to where, alpha value, beta value). 
+        // Parentheses content (from where, to where, alpha value, beta value).
         Imgproc.Canny(frame, frame, progressAlpha,progressBeta) ;
 
 
