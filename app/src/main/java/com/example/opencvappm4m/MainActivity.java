@@ -6,11 +6,8 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.nfc.Tag;
 import android.os.Bundle;
 import android.view.SurfaceView;
-import android.widget.SeekBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -18,11 +15,10 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.OpenCVLoader;
 
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.core.Mat ;
+import org.opencv.core.Point ;
+import org.opencv.core.Scalar ;
+import org.opencv.imgproc.Imgproc ;
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -31,12 +27,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     CameraBridgeViewBase cameraBridgeViewBase ;
     BaseLoaderCallback baseLoaderCallback ;
-
-    // Variables definition.
-    SeekBar mSkBbeta, mSkBalpha, mSkBGblur ;
-    TextView mAlphaTv, mBetaTv, mGblurTv ;
-    int progressAlpha = 0 , progressBeta = 0, progressGblur = 0 ;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA))
             {
 
+                /* gg */
             }
             else
             {
@@ -78,27 +69,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             }
         }
-
-        mSkBalpha = findViewById(R.id.SkBalpha) ;
-        mSkBalpha.setProgress(progressAlpha);
-        mSkBalpha.setMax(400);
-
-        mSkBbeta = findViewById(R.id.SkBbeta) ;
-        mSkBbeta.setProgress(progressBeta);
-        mSkBbeta.setMax(400);
-
-        mSkBGblur = findViewById(R.id.SkBGblur) ;
-        mSkBGblur.setProgress(progressGblur);
-        mSkBGblur.setMax(200);
-
-        mAlphaTv = findViewById(R.id.AlphaTv) ;
-        mAlphaTv.setText("alpha : " + progressAlpha);
-
-        mBetaTv = findViewById(R.id.BetaTv) ;
-        mBetaTv.setText("beta : " + progressBeta);
-
-        mGblurTv = findViewById(R.id.GblurTv) ;
-        mGblurTv.setText("Gblur : " + progressGblur) ;
 
     }
 
@@ -169,96 +139,57 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
 
 
+        // Putting de frame into a variable.
+        Mat src = inputFrame.gray() ;
+        Mat showFrame = inputFrame.rgba() ;
 
         // Variables for define changes in image's pixels.
-        double alpha = 0;
-        double beta = 0;
-
-        // Here is SeekBars structure, this changes the values within "Cany" function by manual control in screen.l
-        // This is alpha control SeekBar.
-        mSkBalpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
-                // Introducing value from Seekbar to a variable.
-                progressAlpha = i ;
-                // Setting text and seekbar value to a textviex.
-                mAlphaTv.setText("alpha : " + progressAlpha);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
+        double alpha = 100 ;
+        double beta = 80 ;
 
 
-        // This is beta control SeekBar.
-        mSkBbeta.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int j, boolean fromUser) {
-                progressBeta = j ;
-                mBetaTv.setText("beta : " + progressBeta);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-
-
-        // This SeekBar control for GaussianBlur function.
-        mSkBGblur.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int k, boolean fromUser) {
-                progressGblur = k ;
-                mGblurTv.setText("Gblur : " + progressGblur);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-
-
-        // Putting de frame into a variable.
-        Mat frame = inputFrame.gray() ;
-
-        // GaussianBlur application.
-        // We define an openCv Size variable for avoid possible problems with the function.
-        org.opencv.core.Size ksize = new Size(9,9) ;
-        Imgproc.GaussianBlur(frame, frame, ksize, progressGblur);
-        
         // Here we aply Canny function to the frame.
         // Parentheses content (from where, to where, alpha value, beta value).
-        Imgproc.Canny(frame, frame, progressAlpha,progressBeta) ;
+        Imgproc.Canny(src, src, alpha, beta) ;
 
 
+        /*
+        // Standard Hough Line Transform
+        Mat lines = new Mat(); // will hold the results of the detection
+        Imgproc.HoughLines(src, lines, 1, Math.PI/180, 400); // runs the actual detection
 
+        // Draw the lines
+        for (int x = 0; x < lines.rows(); x++) {
+            double rho = lines.get(x, 0)[0],
+                    theta = lines.get(x, 0)[1];
+            double a = Math.cos(theta), b = Math.sin(theta);
+            double x0 = a*rho, y0 = b*rho;
+            Point pt1 = new Point(Math.round(x0 + 1000*(-b)), Math.round(y0 + 1000*(a)));
+            Point pt2 = new Point(Math.round(x0 - 1000*(-b)), Math.round(y0 - 1000*(a)));
+            Imgproc.line( src, pt1, pt2, new Scalar(0, 0, 255), 3, Imgproc.LINE_AA, 0);
+        }
+        */
+
+
+        // Probabilistic Line Transform
+        Mat linesP = new Mat(); // will hold the results of the detection
+
+        Imgproc.HoughLinesP(src, linesP, 1, Math.PI/180, 200, 150, 10); // runs the actual detection
+
+        // Draw the lines
+        for (int x = 0; x < linesP.rows(); x++) {
+
+            double[] l = linesP.get(x, 0) ;
+            // Show the lines on inputFrame RGB variable.
+            Imgproc.line(showFrame, new Point(l[0], l[1]), new Point(l[2], l[3]), new Scalar(0, 0, 255), 3, Imgproc.LINE_AA, 0) ;
+
+        }
 
 
         // Show results.
-        return frame;
+            return showFrame ;
+
     }
-
-
 
 
 
