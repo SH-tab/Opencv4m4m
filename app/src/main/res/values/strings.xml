@@ -1,3 +1,21 @@
 <resources>
-    <string name="app_name">OpenCVappM4m</string>
+
+    <string name="app_name">M4m</string>
+
+    // Activity de conexión bluetooth
+
+    <string name="Tv_Tittle_1">M4m</string>
+    <string name="Tv_Tittle_2">controller</string>
+    <string name="Tv_ByXemt">Powered by XemT</string>
+
+    <string name="Iv_RobotcinDescription">RobotcinLogo</string>
+
+    <string name="Txt_Btn_connect">Connect</string>
+
+    <string name="Txt_Tv_BtnConnect">Select a device for connect     :)</string>
+    <string name="Txt_Tv_BtnConnect_no">There isn´t paired devices</string>
+
+    <string name="Txt_datoMandado">Dato mandado : </string>
+    <string name="Txt_btnDesconectar">Desconectar</string>
+
 </resources>
