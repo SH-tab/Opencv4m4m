@@ -1,15 +1,12 @@
 package com.example.opencvappm4m;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import android.Manifest;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.SurfaceView;
@@ -48,22 +45,29 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
     Handler bluetoothIn ;
 
+    private ConnectedThread MyConexionBT ;
+
     final int handlerState = 0 ;
     private BluetoothAdapter btAdapter = null ;
     private BluetoothSocket btSocket = null ;
     private StringBuilder DataStringIN = new StringBuilder() ;
-    private ConnectedThread MyConexionBT ;
 
     private static final UUID BTMODULEUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") ;
 
-    private static String address = null ;
-
     private Mat rgbFrame ;
-    private Mat grayFrame ;
+
+    private long ptRightX ;
+    private long ptLeftX ;
+    private long ptCenterX ;
+    private Point ptRight ;
+    private Point ptLeft ;
+
+
 
 
     // -------------------------  ON CREATE  -------------------------------------------------------
 
+    @SuppressLint("HandlerLeak")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState) ;
@@ -78,6 +82,7 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
         mTvBufferIn = findViewById(R.id.TvBufferIn) ;
 
 
+        // Starts camera activity in its view.
         baseLoaderCallback = new BaseLoaderCallback(this) {
 
             @Override
@@ -99,9 +104,13 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
         } ;
 
 
+
+        // It will receive Bluetooth data from external device.
         bluetoothIn = new Handler() {
 
+            @SuppressLint("SetTextI18n")
             public void handleMessage(android.os.Message msg) {
+
 
                 if (msg.what == handlerState) {
 
@@ -113,7 +122,7 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
                     if (endOfLineIndex > 0) {
 
                         String dataInPrint = DataStringIN.substring(0, endOfLineIndex) ;
-                        mTvBufferIn.setText(getString(R.string.Txt_datoMandado) + dataInPrint) ;
+                        mTvBufferIn.setText(getString(R.string.Txt_dataSend) + dataInPrint) ;
                         DataStringIN.delete(0, DataStringIN.length()) ;
 
                     }
@@ -155,10 +164,8 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
 
 
+    // Creates a safe exit's connection for the device using UUID service.
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
-
-        //crea un conexion de salida segura para el dispositivo
-        //usando el servicio UUID
 
         return device.createRfcommSocketToServiceRecord(BTMODULEUUID) ;
 
@@ -170,6 +177,7 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
     protected void onResume() {
         super.onResume();
 
+        // Initializes OpenCV loaded version and check if there are errors.
         if(!OpenCVLoader.initDebug()) {
 
             Toast.makeText(this, "There is a problem with OpenCV service", Toast.LENGTH_SHORT).show();
@@ -181,17 +189,19 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
         }
 
 
-        //Consigue la direccion MAC desde DeviceListActivity via intent
+        // -------------------------  BLUETOOTH CONNECTION PART  -----------------------------------
+
+        // Gets the MAC direction from DeviceListActivity via intent.
 
         Intent intent = getIntent() ;
 
 
-        //Consigue la direccion MAC desde DeviceListActivity via EXTRA
+        // Gets the MAC direction from DeviceListActivity via EXTRA_DEVICE_ADDRESS.
 
-        address = intent.getStringExtra(MainActivity.EXTRA_DEVICE_ADDRESS) ;
+        String address = intent.getStringExtra(MainActivity.EXTRA_DEVICE_ADDRESS) ;
 
 
-        //Setea la direccion MAC
+        //Sets the Mac address to a Bluetooth device variable.
 
         BluetoothDevice device = btAdapter.getRemoteDevice(address) ;
 
@@ -202,12 +212,12 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
         } catch (IOException e) {
 
-            Toast.makeText(getBaseContext(), "La creacción del Socket fallo", Toast.LENGTH_LONG).show();
+            Toast.makeText(getBaseContext(), "Socket creation failed", Toast.LENGTH_LONG).show();
 
         }
 
 
-        // Establece la conexión con el socket Bluetooth.
+        // Establish the connection with the Bluetooth socket.
 
         try {
 
@@ -220,11 +230,10 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
                 btSocket.close() ;
 
             } catch (IOException e2) {
-
+                Toast.makeText(this, "Something was wrong with Bluetooth connection", Toast.LENGTH_SHORT).show();
             }
 
         }
-
 
         MyConexionBT = new ConnectedThread(btSocket) ;
         MyConexionBT.start() ;
@@ -233,6 +242,8 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
     }
 
 
+
+    // -------------------------  ON PAUSE AND ON DESTROY  -----------------------------------------
 
     @Override
     protected void onPause() {
@@ -261,12 +272,13 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
         try {
 
-            // Cuando se sale de la aplicación esta parte permite
-            // que no se deje abierto el socket
+            // This part allows the socket not to be open after the app is closed.
 
             btSocket.close() ;
 
         } catch (IOException e2) {
+
+            Toast.makeText(this, "Something was wrong", Toast.LENGTH_SHORT).show();
 
         }
 
@@ -274,6 +286,8 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
     }
 
 
+
+    // -------------------------  CAMERA VIEWS PART  ------------------------------------------------
 
     @Override
     public void onCameraViewStarted(int width, int height) {
@@ -309,7 +323,7 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
         }
 
-        grayFrame = inputFrame.gray();
+        Mat grayFrame = inputFrame.gray();
 
         Mat workFrame = new Mat();
 
@@ -317,18 +331,17 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
         // Define colors.
         Scalar colorBlue = new Scalar(10, 255, 255);
         Scalar colorPink = new Scalar(380, 0, 300);
+        Scalar colorGreen = new Scalar(100, 200 , 50) ;
+        Scalar colorBlue2 = new Scalar(10, 100, 255) ;
 
         // Variables for define changes in canny parameters.
-        double alpha = 100;
-        double beta = 80;
+        double alpha = 120;
+        double beta = 100;
 
 
         // -------------------------  CANNY PART  --------------------------------------------------
 
-        // Converting rgbFrame to gray scale.
-        //Imgproc.cvtColor(rgbFrame, grayFrame, Imgproc.COLOR_BGR2GRAY);
-
-        // Aply Canny function to the frame.
+        // Applies Canny function to the frame.
         // Parentheses content (from where, to where, alpha value, beta value).
         Imgproc.Canny(grayFrame, workFrame, alpha, beta);
 
@@ -351,28 +364,99 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
         // Standard Hough Line Transform
         Mat lines = new Mat(); // will hold the results of the detection
-        Imgproc.HoughLines(workFrame, lines, 1, Math.PI / 15, 200, 0, 0, -Math.PI / 3, Math.PI / 3); // runs the actual detection
 
+        Imgproc.HoughLinesP(maskArea, lines, 1, Math.PI/30, 100, 150, 10); // runs the actual detection
 
         // Draw the lines
         for (int x = 0; x < lines.rows(); x++) {
 
-            double rho = lines.get(x, 0)[0];
-            double theta = lines.get(x, 0)[1];
-            double a = Math.cos(theta);
-            double b = Math.sin(theta);
-            double x0 = a * rho, y0 = b * rho;
+            double[] l = lines.get(x, 0);
 
-            Point pt1 = new Point(Math.round(x0 + 1000 * (-b)), Math.round(y0 + 1000 * (a)));
-            Point pt2 = new Point(Math.round(x0 - 1000 * (-b)), Math.round(y0 - 1000 * (a)));
+            // Theta will be line's slope.
+            double theta = (l[2]-l[0]) / (l[3]-l[1]) ;
 
-            // Will draw lines on the frame we choose, in this case rgbFrame.
-            Imgproc.line(rgbFrame, pt1, pt2, colorBlue, 3, Imgproc.LINE_AA, 0);
+
+            // If theta is positive it's a right line.
+            if (theta>0 && theta<1.8) {
+
+                // Calculate half of left line.
+                ptRightX = Math.round(l[0] + ( (l[2]-l[0])/2) ) ;
+
+                // Define right point.
+                ptRight = new Point(ptRightX, 630) ;
+
+                // Draw all founded lines.
+                Imgproc.line(rgbFrame, new Point(l[0], l[1]), new Point(l[2], l[3]), colorBlue, 3, Imgproc.LINE_AA, 0);
+
+            }
+
+            // If theta is negative it's a left line.
+            if (theta>-1.8 && theta<0 ) {
+
+                // Calculate half of left line.
+                ptLeftX = Math.round( l[0] + ((l[2]-l[0])/2) ) ;
+
+                // Define left point.
+                ptLeft = new Point(ptLeftX, 630) ;
+
+                // Draw all founded lines.
+                Imgproc.line(rgbFrame, new Point(l[0], l[1]), new Point(l[2], l[3]), colorBlue, 3, Imgproc.LINE_AA, 0);
+
+            }
+
+
+            // -------------------------  DRAW SOME LINES AND DEFINE CENTER POINT  -----------------
+
+            if (ptLeft != null && ptRight != null) {
+
+                ptCenterX = ptLeftX + (ptRightX - ptLeftX)/2 ;
+
+
+
+                // Draw a line between the two rails found.
+                Imgproc.line(rgbFrame, ptRight, ptLeft, colorPink, 3, Imgproc.LINE_AA, 0);
+
+                // Draw a line for the line between's center.
+                Imgproc.line(rgbFrame, new Point(ptCenterX, 570), new Point(ptCenterX, 690), colorGreen,3, Imgproc.LINE_AA, 0);
+
+
+            }
+
+            // Draw a reference line at center of X axis.
+            Imgproc.line(rgbFrame, new Point(960, 570), new Point(960, 690), colorBlue2,3, Imgproc.LINE_AA, 0);
+
+
+            // -------------------------  DECISIONS FOR THE CAR CONTROLS  --------------------------
+
+            if (ptCenterX>=0 && ptCenterX<=660) {
+
+                //MyConexionBT.write(getString(R.string.Txt_Left));
+                mTvBufferIn.setText(getString(R.string.Txt_Left));
+
+            }else if (ptCenterX>660 && ptCenterX<960) {
+
+                //MyConexionBT.write(getString(R.string.Txt_LittleLeft));
+                mTvBufferIn.setText(getString(R.string.Txt_LittleLeft)) ;
+
+            } else if (ptCenterX>960 && ptCenterX<1260) {
+
+                //MyConexionBT.write(getString(R.string.Txt_LittleRight));
+                mTvBufferIn.setText(getString(R.string.Txt_LittleRight)) ;
+
+            } else if (ptCenterX>=1260 && ptCenterX<=1920) {
+
+                //MyConexionBT.write(getString(R.string.Txt_Right));
+                mTvBufferIn.setText(getString(R.string.Txt_Right)) ;
+
+            }
+
+
 
         }
 
 
-        // -------------------------  GARBAGE COLECTOR PART  ---------------------------------------
+
+        // -------------------------  GARBAGE COLLECTOR PART  ---------------------------------------
 
         maskArea.release() ;
         mask.release() ;
@@ -395,14 +479,13 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
     // -------------------------  CALLED FUNCTIONS  ------------------------------------------------
 
-    //Crea la clase que permite crear el evento de conexion
-
+    // Creates a class that allows create the connection event.
     private class ConnectedThread extends Thread {
 
         private final InputStream mmInStream ;
         private final OutputStream mmOutStream ;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        private ConnectedThread(BluetoothSocket socket) {
 
             InputStream tmpIn = null ;
             OutputStream tmpOut = null ;
@@ -415,6 +498,8 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
             } catch (IOException e) {
 
+                Toast.makeText(ArtificialVision.this, "Something was wrong with Bluetooth socket", Toast.LENGTH_SHORT).show();
+
             }
 
 
@@ -424,15 +509,14 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
         }
 
 
-
+        // It's for get data from connection with external devices.
         public void run() {
 
             byte[] buffer = new byte[256] ;
             int bytes ;
 
 
-            // Se mantiene en modo escucha para determinar el ingreso de datos
-
+            // It remains in listening mode to determine data entry.
             while (true) {
 
                 try {
@@ -441,8 +525,7 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
                     String readMessage = new String(buffer, 0, bytes) ;
 
 
-                    // Envia los datos obtenidos hacia el evento via handler
-
+                    // Sends the obtaining data to the event via Handler.
                     bluetoothIn.obtainMessage(handlerState, bytes, -1, readMessage).sendToTarget() ;
 
                 } catch (IOException e) {
@@ -457,9 +540,9 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
 
 
 
-        //Envio de trama
+        // Data send by bluetooth connection.
 
-        public void write(String input) {
+        private void write(String input) {
 
             try {
 
@@ -468,9 +551,9 @@ public class ArtificialVision extends AppCompatActivity implements CameraBridgeV
             }
             catch (IOException e) {
 
-                //si no es posible enviar datos se cierra la conexión
+                //If it isn't possible send data, connection will be close.
 
-                Toast.makeText(getBaseContext(), "La Conexión fallo", Toast.LENGTH_LONG).show() ;
+                Toast.makeText(getBaseContext(), "Failed connection", Toast.LENGTH_LONG).show() ;
                 finish() ;
 
             }
